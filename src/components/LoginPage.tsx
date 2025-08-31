@@ -83,7 +83,7 @@ export default function LoginPage({ onLogin, isLoading, error }: LoginPageProps)
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-              <p className="text-gray-600">Sign in to access your attendance dashboard</p>
+              <p className="text-gray-600">Sign in to your attendance dashboard</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,25 +152,6 @@ export default function LoginPage({ onLogin, isLoading, error }: LoginPageProps)
                 )}
               </button>
             </form>
-          </div>
-
-          {/* Features Section */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-100">
-              <FaChartBar className="text-2xl text-blue-600 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Analytics</h3>
-              <p className="text-xs text-gray-600 mt-1">Detailed insights</p>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-100">
-              <FaCalendar className="text-2xl text-indigo-600 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Tracking</h3>
-              <p className="text-xs text-gray-600 mt-1">Real-time updates</p>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 text-center border border-gray-100">
-              <FaShieldAlt className="text-2xl text-green-600 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Secure</h3>
-              <p className="text-xs text-gray-600 mt-1">Protected data</p>
-            </div>
           </div>
         </div>
       </div>

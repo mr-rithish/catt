@@ -9,12 +9,7 @@ export class ApiError extends Error {
 
 export async function fetchStudentData(htno: string, password: string): Promise<AttendanceResponse> {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL;
-    if (!baseUrl) {
-      throw new ApiError('API base URL not configured');
-    }
-    
-    const url = `${baseUrl}/get_student_data?htno=${htno}&password=${password}`;
+    const url = `/api/attendance?htno=${htno}&password=${password}`;
     
     console.log('Fetching attendance data...');
     
