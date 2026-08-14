@@ -19,12 +19,6 @@
 - [API design](#api-design)
 - [Local development](#local-development)
 - [Deployment](#deployment)
-- [Security and privacy considerations](#security-and-privacy-considerations)
-- [Engineering decisions and trade-offs](#engineering-decisions-and-trade-offs)
-- [Current limitations](#current-limitations)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
