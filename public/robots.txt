@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://vce75.me/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1

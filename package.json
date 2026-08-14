@@ -1,7 +1,8 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "vce-student-attendance-portal",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "VCE Student Attendance Portal - Track your academic progress and monitor attendance percentage",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vercel/analytics": "^1.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0"

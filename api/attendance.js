@@ -1,19 +1,23 @@
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { htno, password } = req.query;
+  const { htno, password } = req.body || {};
 
   if (!htno || !password) {
     return res.status(400).json({ error: 'HTNO and password are required' });
   }
 
   try {
-    const apiUrl = `https://api.vce75.me/get_student_data?htno=${htno}&password=${password}`;
-    
+    const apiUrl = `https://vce-ckdjcdajdfgedhcm.centralindia-01.azurewebsites.net/get_student_data`;
+
     const response = await fetch(apiUrl, {
-      method: 'GET',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ htno, password }),
     });
 
     if (!response.ok) {

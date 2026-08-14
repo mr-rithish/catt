@@ -9,12 +9,14 @@ import {
   FaExclamationTriangle,
   FaCheckCircle,
   FaUsers,
-  FaGraduationCap,
+  FaBars,
   FaCalculator,
   FaBullseye,
+  FaGraduationCap,
 } from 'react-icons/fa';
 import { StudentInfo, SubjectAttendance, AttendanceSummary } from '../types/attendance';
 import { getAttendanceStatus } from '../utils/attendanceParser';
+import GpaCalculator from './GpaCalculator';
 
 interface AttendanceDashboardProps {
   studentInfo: StudentInfo;
@@ -30,66 +32,153 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({
   onLogout,
 }) => {
   const [targetPercentage, setTargetPercentage] = useState(75);
+  const [targetInput, setTargetInput] = useState('75');
+  const [activeTab, setActiveTab] = useState<'attendance' | 'gpa'>('attendance');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const overallAttendance = summary.find((s) => s.type === 'Regular')?.percentage || 0;
-  const ccaAttendance = summary.find((s) => s.type === 'CCA')?.percentage || 0;
-  const overallStatus = getAttendanceStatus(overallAttendance);
-  const ccaStatus = getAttendanceStatus(ccaAttendance);
 
-  // Calculate classes needed for target percentage
   const regularSummary = summary.find((s) => s.type === 'Regular');
+  const overallAttendance = regularSummary?.percentage || 0;
   const totalClasses = regularSummary?.totalClasses || 0;
   const presentClasses = regularSummary?.presentees || 0;
+  const extraClasses = regularSummary?.extraClasses || 0;
+
+  // For attendance calculator, present = presentees + extraClasses
+  const presentWithExtra = presentClasses + extraClasses;
+
+  const handleTargetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setTargetInput(raw);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+      setTargetPercentage(parsed);
+    }
+  };
+
+  const isInputInvalid =
+    targetInput.trim() !== '' &&
+    (isNaN(parseFloat(targetInput)) ||
+      parseFloat(targetInput) < 0 ||
+      parseFloat(targetInput) > 100);
+
 
   const calculateClassesNeeded = (target: number) => {
+    // Use presentWithExtra for calculations
     if (overallAttendance >= target) {
-      // Calculate how many classes can be bunked
       let canBunk = 0;
-      let tempPresent = presentClasses;
+      let tempPresent = presentWithExtra;
       let tempTotal = totalClasses;
-
       while (tempTotal > 0 && (tempPresent / (tempTotal + 1)) * 100 >= target) {
         tempTotal += 1;
         canBunk += 1;
       }
-
       return { type: 'bunk', count: canBunk };
     } else {
-      // Calculate how many classes need to be attended
       let needToAttend = 0;
-      let tempPresent = presentClasses;
+      let tempPresent = presentWithExtra;
       let tempTotal = totalClasses;
-
       while (tempTotal > 0 && (tempPresent / tempTotal) * 100 < target) {
         tempPresent += 1;
         tempTotal += 1;
         needToAttend += 1;
       }
-
       return { type: 'attend', count: needToAttend };
     }
   };
 
   const classCalculation = calculateClassesNeeded(targetPercentage);
 
+  const getAttendanceColor = (pct: number) => {
+    if (pct >= 90) return 'text-emerald-400';
+    if (pct >= 80) return 'text-blue-400';
+    if (pct >= 75) return 'text-amber-400';
+    return 'text-red-400';
+  };
+
+  const getAttendanceBg = (pct: number) => {
+    if (pct >= 90) return 'bg-emerald-500/10 border-emerald-500/20';
+    if (pct >= 80) return 'bg-blue-500/10 border-blue-500/20';
+    if (pct >= 75) return 'bg-amber-500/10 border-amber-500/20';
+    return 'bg-red-500/10 border-red-500/20';
+  };
+
+  const getAttendanceBar = (pct: number) => {
+    if (pct >= 90) return 'bg-emerald-500';
+    if (pct >= 80) return 'bg-blue-500';
+    if (pct >= 75) return 'bg-amber-500';
+    return 'bg-red-500';
+  };
+
+  const getAttendanceLabel = (pct: number) => {
+    if (pct >= 90) return 'Excellent';
+    if (pct >= 80) return 'Good';
+    if (pct >= 75) return 'Warning';
+    return 'Critical';
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50">
+    <div className="min-h-screen bg-[#0f1117] relative overflow-x-hidden">
+
+      {/* Background grid */}
+      <div
+        className="fixed inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+      {/* Glow blobs */}
+      <div className="fixed top-[-10%] left-[-5%] w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-5%] w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* ── Header ── */}
+      <header className="bg-[#0f1117]/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <FaGraduationCap className="h-6 w-6 text-white" />
+
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="w-10 h-10 bg-blue-600 hover:bg-blue-500 rounded-xl flex items-center justify-center transition-colors shadow-lg shadow-blue-600/20"
+                >
+                  <FaBars className="h-4 w-4 text-white" />
+                  <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 bg-rose-500 rounded-full ring-2 ring-[#0f1117]" />
+                </button>
+
+                {isMenuOpen && (
+                  <div className="absolute top-12 left-0 bg-[#1a1d27] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/40 py-1.5 min-w-[170px] z-50">
+                    {(['attendance', 'gpa'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => { setActiveTab(tab); setIsMenuOpen(false); }}
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                          activeTab === tab
+                            ? 'text-blue-400 bg-blue-500/10'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        {tab === 'attendance' ? 'Attendance' : 'GPA Calculator'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Attendance Portal</h1>
-                <p className="text-sm text-gray-500">Academic Year {studentInfo['Acad. Year']}</p>
+
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <FaGraduationCap className="text-white text-xs" />
+                </div>
+                <div>
+                  <h1 className="text-white font-bold text-base leading-tight">Attendance Portal</h1>
+                  <p className="hidden sm:block text-gray-500 text-xs">Academic Year {studentInfo['Acad. Year']}</p>
+                </div>
               </div>
             </div>
+
             <button
               onClick={onLogout}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              className="px-4 py-2 text-gray-400 hover:text-white text-sm font-medium hover:bg-white/5 rounded-lg transition-all"
             >
               Logout
             </button>
@@ -97,313 +186,290 @@ const AttendanceDashboard: React.FC<AttendanceDashboardProps> = ({
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Student Info Card */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 p-4 sm:p-6 mb-8">
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                <FaUser className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">
-                  {studentInfo['Student Name']}
-                </h2>
-                <p className="text-gray-600 font-medium text-sm sm:text-base">{studentInfo.HTNO}</p>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-500">
-                  <span className="flex items-center">
-                    <FaUsers className="h-4 w-4 mr-1" />
-                    Year {studentInfo.Year}, Semester {studentInfo.Semester}
-                  </span>
-                  <span>Section {studentInfo.Section}</span>
-                </div>
-              </div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
+        {activeTab === 'attendance' ? (
+          <>
+            {/* ── Student Info Card ── */}
+            <div className="bg-[#1a1d27] border border-white/[0.08] rounded-2xl p-5 sm:p-6 mb-6 shadow-xl shadow-black/20">
 
-            {/* Attendance Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className={`px-3 py-2 rounded-xl ${overallStatus.bgColor}`}>
-                <div className="flex items-center justify-center space-x-2">
-                  {overallAttendance >= 75 ? (
-                    <FaCheckCircle className={`h-4 w-4 ${overallStatus.color}`} />
-                  ) : (
-                    <FaExclamationTriangle className={`h-4 w-4 ${overallStatus.color}`} />
-                  )}
-                  <span className={`font-semibold text-sm ${overallStatus.color}`}>
-                    {overallAttendance}% Overall
-                  </span>
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-600/20">
+                  <FaUser className="h-6 w-6 text-white" />
                 </div>
-              </div>
-              <div className={`px-3 py-2 rounded-xl ${ccaStatus.bgColor}`}>
-                <div className="flex items-center justify-center space-x-2">
-                  {ccaAttendance >= 75 ? (
-                    <FaCheckCircle className={`h-4 w-4 ${ccaStatus.color}`} />
-                  ) : (
-                    <FaExclamationTriangle className={`h-4 w-4 ${ccaStatus.color}`} />
-                  )}
-                  <span className={`font-semibold text-sm ${ccaStatus.color}`}>
-                    {ccaAttendance}% CCA
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Class Calculator */}
-            <div className="pt-4 border-t border-gray-200/50">
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center space-x-2">
-                    <FaCalculator className="h-5 w-5 text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">Attendance Calculator</h3>
-                  </div>
-                  <div className="flex items-center space-x-2 justify-center sm:justify-end">
-                    <FaBullseye className="h-4 w-4 text-gray-500" />
-                    <label htmlFor="target" className="text-sm font-medium text-gray-700">
-                      Target:
-                    </label>
-                    <select
-                      id="target"
-                      value={targetPercentage}
-                      onChange={(e) => setTargetPercentage(Number(e.target.value))}
-                      className="bg-white border border-gray-300 rounded-lg px-3 py-1 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
-                    >
-                      <option value={65}>65%</option>
-                      <option value={70}>70%</option>
-                      <option value={75}>75%</option>
-                      <option value={80}>80%</option>
-                      <option value={85}>85%</option>
-                      <option value={90}>90%</option>
-                      <option value={95}>95%</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg p-4 shadow-sm">
-                  {classCalculation.type === 'attend' ? (
-                    <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 text-center sm:text-left">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FaChartLine className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          To reach {targetPercentage}% attendance:
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-blue-600">
-                          Attend next{' '}
-                          <span className="text-xl sm:text-2xl">{classCalculation.count}</span> classes
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 text-center sm:text-left">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FaCheckCircle className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          You can maintain {targetPercentage}% by:
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-emerald-600">
-                          Bunking up to{' '}
-                          <span className="text-xl sm:text-2xl">{classCalculation.count}</span> classes
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          {summary.map((item, index) => {
-            const status = getAttendanceStatus(item.percentage);
-            return (
-              <div
-                key={index}
-                className="bg-white/70 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 p-4 sm:p-6"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    {item.type === 'Regular' ? (
-                      <FaBook className="h-5 w-5 text-blue-600" />
-                    ) : (
-                      <FaAward className="h-5 w-5 text-purple-600" />
-                    )}
-                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
-                      {item.type} Classes
-                    </h3>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-xl sm:text-2xl font-bold ${status.color}`}>
-                      {item.percentage}%
+                <div className="min-w-0">
+                  <h2 className="text-white font-bold text-lg sm:text-xl leading-tight truncate">
+                    {studentInfo['Student Name']}
+                  </h2>
+                  <p className="text-gray-400 text-sm font-mono">{studentInfo.HTNO}</p>
+                  <div className="flex flex-wrap items-center gap-3 mt-1">
+                    <span className="flex items-center gap-1 text-gray-500 text-xs">
+                      <FaUsers className="h-3 w-3" />
+                      Year {studentInfo.Year} · Sem {studentInfo.Semester}
                     </span>
-                    <div className="mt-1">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}
-                      >
-                        {item.percentage >= 90
-                          ? 'Excellent'
-                          : item.percentage >= 80
-                          ? 'Good'
-                          : item.percentage >= 75
-                          ? 'Warning'
-                          : 'Critical'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Classes:</span>
-                    <span className="font-medium text-gray-900">{item.totalClasses}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Present:</span>
-                    <span className="font-medium text-emerald-600">{item.presentees}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Absent:</span>
-                    <span className="font-medium text-red-600">{item.absentees}</span>
+                    <span className="text-gray-500 text-xs">Section {studentInfo.Section}</span>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Subject-wise Attendance */}
-        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 border-b border-gray-200/50">
-            <div className="flex items-center space-x-2">
-              <FaChartLine className="h-5 w-5 text-blue-600" />
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                Subject-wise Attendance
-              </h3>
+              {/* Attendance pill: Only Overall */}
+              <div className="grid grid-cols-1 gap-3 mb-5">
+                <div className={`border rounded-xl px-4 py-3 ${getAttendanceBg(overallAttendance)}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-400 text-xs font-medium">Overall</span>
+                    {overallAttendance >= 75
+                      ? <FaCheckCircle className={`h-3.5 w-3.5 ${getAttendanceColor(overallAttendance)}`} />
+                      : <FaExclamationTriangle className={`h-3.5 w-3.5 ${getAttendanceColor(overallAttendance)}`} />
+                    }
+                  </div>
+                  <p className={`text-2xl font-black ${getAttendanceColor(overallAttendance)}`}>{overallAttendance}%</p>
+                  <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${getAttendanceBar(overallAttendance)}`}
+                      style={{ width: `${Math.min(overallAttendance, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Attendance Calculator ── */}
+              <div className="border-t border-white/[0.06] pt-5">
+                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <FaCalculator className="h-4 w-4 text-blue-400" />
+                      <h3 className="text-white font-semibold text-sm">Attendance Calculator</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FaBullseye className="h-3.5 w-3.5 text-gray-500" />
+                      <label htmlFor="target" className="text-gray-400 text-xs font-medium">Target:</label>
+                      <div className="relative flex items-center">
+                        <input
+                          id="target"
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={targetInput}
+                          onChange={handleTargetChange}
+                          placeholder="75"
+                          className={`w-20 bg-white/5 border rounded-lg px-3 py-1.5 pr-7 text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/60 transition-all ${
+                            isInputInvalid ? 'border-red-500/50 ring-1 ring-red-500/30' : 'border-white/10'
+                          }`}
+                        />
+                        <span className="absolute right-2 text-xs text-gray-500 pointer-events-none">%</span>
+                      </div>
+                      {isInputInvalid && (
+                        <span className="text-xs text-red-400">0–100</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#0f1117] rounded-lg p-4 border border-white/[0.04]">
+                    <div className="flex flex-wrap gap-4 mb-3">
+                      <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded-lg">Present: <span className="text-emerald-400 font-bold">{presentClasses}</span></span>
+                      <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">Extra: <span className="font-bold">{extraClasses}</span></span>
+                      <span className="text-xs text-gray-400 bg-white/5 px-2 py-1 rounded-lg">Total: <span className="font-bold">{totalClasses}</span></span>
+                    </div>
+                    {classCalculation.type === 'attend' ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <FaChartLine className="h-4 w-4 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">To reach {targetPercentage}% attendance</p>
+                          <p className="text-blue-400 font-bold text-base">
+                            Attend next <span className="text-2xl">{classCalculation.count}</span> classes
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <FaCheckCircle className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-gray-500 text-xs">Maintaining {targetPercentage}% attendance</p>
+                          <p className="text-emerald-400 font-bold text-base">
+                            You can bunk <span className="text-2xl">{classCalculation.count}</span> classes
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-gray-50/50">
-                <tr>
-                  <th className="sticky left-0 bg-gray-50/50 px-4 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-r border-gray-200/50 min-w-[180px]">
-                    Subject
-                  </th>
-                  <th className="px-2 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Classes Held
-                  </th>
-                  <th className="px-2 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Present
-                  </th>
-                  <th className="px-2 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Absent
-                  </th>
-                  <th className="px-2 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Attendance %
-                  </th>
-                  <th className="px-2 sm:px-6 py-3 sm:py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200/50">
-                {subjects.map((subject, index) => {
-                  const status = getAttendanceStatus(subject.percentage);
-                  return (
-                    <tr
-                      key={index}
-                      className="hover:bg-gray-50/30 transition-colors duration-200"
-                    >
-                      <td className="sticky left-0 bg-white/70 px-4 sm:px-6 py-3 sm:py-4 border-r border-gray-200/50">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <div>
-                            <div className="font-medium text-gray-900 text-xs sm:text-sm leading-tight whitespace-nowrap pr-2">
-                              {subject.name}
-                            </div>
-                          </div>
+            {/* ── Summary Cards ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {summary.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-[#1a1d27] border border-white/[0.08] rounded-xl p-5 shadow-xl shadow-black/20"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      {item.type === 'Regular'
+                        ? <FaBook className="h-4 w-4 text-blue-400" />
+                        : <FaAward className="h-4 w-4 text-purple-400" />
+                      }
+                      <span className="text-gray-300 font-semibold text-sm">{item.type}</span>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getAttendanceBg(item.percentage)} ${getAttendanceColor(item.percentage)}`}>
+                      {getAttendanceLabel(item.percentage)}
+                    </span>
+                  </div>
+
+                  <p className={`text-3xl font-black mb-1 ${getAttendanceColor(item.percentage)}`}>
+                    {item.percentage}%
+                  </p>
+                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-4">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${getAttendanceBar(item.percentage)}`}
+                      style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    {item.type === 'Regular' ? (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Total</span>
+                          <span className="font-semibold text-gray-400">{item.totalClasses}</span>
                         </div>
-                      </td>
-                      <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {subject.held}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                          {subject.present}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          {subject.absent}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
-                        <div className="flex flex-col items-center space-y-1">
-                          <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                subject.percentage >= 90
-                                  ? 'bg-emerald-500'
-                                  : subject.percentage >= 80
-                                  ? 'bg-blue-500'
-                                  : subject.percentage >= 75
-                                  ? 'bg-amber-500'
-                                  : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(subject.percentage, 100)}%` }}
-                            ></div>
-                          </div>
-                          <span className={`font-semibold text-xs sm:text-sm ${status.color}`}>
-                            {subject.percentage}%
-                          </span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Present</span>
+                          <span className="font-semibold text-emerald-400">{item.presentees}</span>
                         </div>
-                      </td>
-                      <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}
-                        >
-                          {subject.percentage >= 90
-                            ? 'Excellent'
-                            : subject.percentage >= 80
-                            ? 'Good'
-                            : subject.percentage >= 75
-                            ? 'Warning'
-                            : 'Critical'}
-                        </span>
-                      </td>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Extra</span>
+                          <span className="font-semibold text-blue-400">{item.extraClasses || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Absent</span>
+                          <span className="font-semibold text-red-400">{item.absentees}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Total</span>
+                          <span className="font-semibold text-gray-400">{item.totalClasses}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Present</span>
+                          <span className="font-semibold text-emerald-400">{item.presentees}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Absent</span>
+                          <span className="font-semibold text-red-400">{item.absentees}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Subject-wise Table ── */}
+            <div className="bg-[#1a1d27] border border-white/[0.08] rounded-2xl overflow-hidden shadow-xl shadow-black/20 mb-6">
+              <div className="px-5 sm:px-6 py-4 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  <FaChartLine className="h-4 w-4 text-blue-400" />
+                  <h3 className="text-white font-semibold text-sm sm:text-base">Subject-wise Attendance</h3>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[580px]">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      <th className="sticky left-0 bg-[#1a1d27] pl-5 pr-3 sm:px-6 py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider border-r border-white/[0.06] min-w-[130px]">
+                        Subject
+                      </th>
+                      {['Held', 'Present', 'Absent', 'Attendance', 'Status'].map((h) => (
+                        <th key={h} className="px-3 sm:px-5 py-3 text-center text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {subjects.map((subject, index) => (
+                      <tr key={index} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="sticky left-0 bg-[#1a1d27] pl-5 pr-3 sm:px-6 py-3 sm:py-4 border-r border-white/[0.06]">
+                          <p className="text-gray-200 font-medium text-xs sm:text-sm leading-tight truncate max-w-[120px] sm:max-w-[180px]">
+                            {subject.name}
+                          </p>
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+                          <span className="text-gray-400 text-xs font-medium bg-white/5 px-2 py-0.5 rounded-full">
+                            {subject.held}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+                          <span className="text-emerald-400 text-xs font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            {subject.present}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+                          <span className="text-red-400 text-xs font-medium bg-red-500/10 px-2 py-0.5 rounded-full">
+                            {subject.absent}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-12 sm:w-16 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${getAttendanceBar(subject.percentage)}`}
+                                style={{ width: `${Math.min(subject.percentage, 100)}%` }}
+                              />
+                            </div>
+                            <span className={`text-xs font-semibold ${getAttendanceColor(subject.percentage)}`}>
+                              {subject.percentage}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 sm:px-5 py-3 sm:py-4 text-center">
+                          <span className={`text-xs font-medium px-2 py-1 rounded-full border ${getAttendanceBg(subject.percentage)} ${getAttendanceColor(subject.percentage)}`}>
+                            {getAttendanceLabel(subject.percentage)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-        {/* Academic Period Info */}
-        <div className="mt-8 bg-white/70 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 p-4 sm:p-6">
-          <div className="flex items-center space-x-2 mb-4">
-            <FaCalendar className="h-5 w-5 text-blue-600" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Academic Period</h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
-            <div className="flex items-center space-x-2">
-              <FaClock className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">Start Date:</span>
-              <span className="font-medium text-gray-900">{studentInfo['Start Date']}</span>
+            {/* ── Academic Period ── */}
+            <div className="bg-[#1a1d27] border border-white/[0.08] rounded-xl p-5 sm:p-6 shadow-xl shadow-black/20">
+              <div className="flex items-center gap-2 mb-4">
+                <FaCalendar className="h-4 w-4 text-blue-400" />
+                <h3 className="text-white font-semibold text-sm">Academic Period</h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: 'Start Date', value: studentInfo['Start Date'] },
+                  { label: 'End Date', value: studentInfo['End Date'] || 'Ongoing' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <FaClock className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
+                    <span className="text-gray-500 text-xs">{label}:</span>
+                    <span className="text-gray-300 text-xs font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <FaClock className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">End Date:</span>
-              <span className="font-medium text-gray-900">
-                {studentInfo['End Date'] || 'Ongoing'}
-              </span>
-            </div>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <GpaCalculator subjects={subjects} />
+            <p className="text-gray-600 text-xs">
+              Tip: Leave grade or credits empty for subjects without exams; they'll be ignored in GPA.
+            </p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
