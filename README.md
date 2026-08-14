@@ -7,7 +7,6 @@
 
 **VCE75** is a full-stack student attendance companion for Vardhaman College of Engineering students. It combines a fast attendance and bunk planner with an ERP-powered attendance dashboard, subject-wise analytics, target-attendance calculations, and a credit-weighted GPA calculator.
 
-The live application is available at **[www.vce75.me](https://www.vce75.me/)**. This repository (`catt`) contains the React frontend. The FastAPI scraping service that powers the ERP integration is maintained separately in **[`mr-rithish/zatt`](https://github.com/mr-rithish/zatt)**.
 ---
 
 ## Table of contents
